@@ -13,9 +13,11 @@ import {
   FaCheck,
   FaSpinner,
   FaDownload,
-  FaExclamationTriangle
+  FaExclamationTriangle,
+  FaLanguage,
+  FaCompressAlt
 } from 'react-icons/fa';
-import { convertMedia } from './services/conversionService';
+import { convertMedia, getFileExtension } from './services/conversionService';
 import { extractYoutubeId } from './services/apiConfig';
 
 const OUTPUT_FORMATS = [
@@ -36,6 +38,9 @@ export default function App() {
   const [animationClass, setAnimationClass] = useState('');
   const [conversionResult, setConversionResult] = useState(null);
   const [error, setError] = useState(null);
+  const [translateOption, setTranslateOption] = useState(false);
+  const [targetLanguage, setTargetLanguage] = useState('Spanish');
+  const [summarizeOption, setSummarizeOption] = useState(false);
 
   useEffect(() => {
     setAnimationClass('animate-fade-in');
@@ -107,8 +112,9 @@ export default function App() {
         inputType === 'url' ? url : file,
         outputFormat,
         {
-          translate: false, // Set to true if translation is needed
-          store: true // Store the result for download
+          translate: translateOption,
+          targetLanguage: translateOption ? targetLanguage : null,
+          summarize: summarizeOption
         }
       );
       
@@ -146,23 +152,12 @@ export default function App() {
     URL.revokeObjectURL(url);
   };
 
-  const getFileExtension = (format) => {
-    switch (format) {
-      case 'text': return 'txt';
-      case 'pdf': return 'pdf';
-      case 'audio': return 'mp3';
-      case 'video': return 'mp4';
-      case 'course': return 'json';
-      default: return 'txt';
-    }
-  };
-
   return (
     <div className="container">
       <div className="app-header">
         <h1 className="app-title">Universal Media Converter</h1>
         <p className="app-subtitle">
-          Transform any content into your preferred format with enterprise-grade conversion technology
+          Transform any content into your preferred format with Gemini AI
         </p>
       </div>
       
@@ -192,7 +187,7 @@ export default function App() {
                 type="url"
                 value={url}
                 onChange={handleUrlChange}
-                placeholder="Paste URL (YouTube, podcast, blog, website, social media, etc.)"
+                placeholder="Paste YouTube URL"
                 className="url-input"
               />
             </div>
@@ -244,6 +239,62 @@ export default function App() {
                 <span className="format-option-label">{format.label}</span>
               </label>
             ))}
+          </div>
+        </div>
+      )}
+
+      {outputFormat && (
+        <div className={`advanced-options ${animationClass} delay-150`}>
+          <div className="step-indicator">
+            <div className="step-number">3</div>
+            <div className="step-title">Advanced Options</div>
+          </div>
+          
+          <div className="options-grid">
+            <label className="option-toggle">
+              <input
+                type="checkbox"
+                checked={translateOption}
+                onChange={(e) => setTranslateOption(e.target.checked)}
+              />
+              <div className="toggle-slider"></div>
+              <div className="option-label">
+                <FaLanguage className="option-icon" />
+                <span>Translate Content</span>
+              </div>
+            </label>
+            
+            {translateOption && (
+              <div className="language-selector">
+                <select 
+                  value={targetLanguage}
+                  onChange={(e) => setTargetLanguage(e.target.value)}
+                  className="language-dropdown"
+                >
+                  <option value="Spanish">Spanish</option>
+                  <option value="French">French</option>
+                  <option value="German">German</option>
+                  <option value="Chinese">Chinese</option>
+                  <option value="Japanese">Japanese</option>
+                  <option value="Russian">Russian</option>
+                  <option value="Arabic">Arabic</option>
+                  <option value="Portuguese">Portuguese</option>
+                </select>
+              </div>
+            )}
+            
+            <label className="option-toggle">
+              <input
+                type="checkbox"
+                checked={summarizeOption}
+                onChange={(e) => setSummarizeOption(e.target.checked)}
+              />
+              <div className="toggle-slider"></div>
+              <div className="option-label">
+                <FaCompressAlt className="option-icon" />
+                <span>Summarize Content</span>
+              </div>
+            </label>
           </div>
         </div>
       )}

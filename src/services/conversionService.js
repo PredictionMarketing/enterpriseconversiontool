@@ -1,129 +1,150 @@
 import { convertYoutubeToText } from './youtubeService';
-import { convertAudioToText, convertTextToAudio } from './speechService';
-import { processDocument, convertToPdf, convertToCourse } from './documentService';
-import { translateText } from './translationService';
-import { uploadFile } from './storageService';
 
 /**
- * Main conversion service that orchestrates the conversion process
- * based on input type and desired output format
+ * Get file extension based on output format
+ * @param {string} format - Output format (text, pdf, audio, video, course)
+ * @returns {string} - File extension
  */
-export const convertMedia = async (inputType, inputData, outputFormat, options = {}) => {
-  try {
-    let processedData = null;
-    
-    // Step 1: Process input based on type
-    switch (inputType) {
-      case 'url':
-        if (inputData.includes('youtube.com') || inputData.includes('youtu.be')) {
-          processedData = await convertYoutubeToText(inputData);
-        } else {
-          // For other URLs, you would implement web scraping or use other APIs
-          throw new Error('URL type not supported yet');
-        }
-        break;
-        
-      case 'file':
-        const file = inputData;
-        
-        // Process based on file type
-        if (file.type.includes('audio')) {
-          processedData = await convertAudioToText(file);
-        } else if (file.type.includes('video')) {
-          // For video files, extract audio and then transcribe
-          // This is a simplified placeholder
-          processedData = { text: 'Video transcription placeholder' };
-        } else if (file.type.includes('pdf') || file.type.includes('image') || file.type.includes('text')) {
-          processedData = await processDocument(file);
-        } else {
-          throw new Error('File type not supported');
-        }
-        break;
-        
-      default:
-        throw new Error('Invalid input type');
-    }
-    
-    // Step 2: Apply any transformations (e.g., translation)
-    if (options.translate && options.targetLanguage) {
-      processedData.text = await translateText(
-        processedData.text || processedData.transcript, 
-        options.targetLanguage
-      );
-    }
-    
-    // Step 3: Convert to desired output format
-    let result = null;
-    
-    switch (outputFormat) {
-      case 'text':
-        result = {
-          contentType: 'text/plain',
-          content: processedData.text || processedData.transcript,
-          title: processedData.title || 'Converted Text'
-        };
-        break;
-        
-      case 'pdf':
-        result = await convertToPdf(processedData);
-        break;
-        
-      case 'audio':
-        result = await convertTextToAudio(
-          processedData.text || processedData.transcript,
-          options.voice
-        );
-        break;
-        
-      case 'video':
-        // Creating videos is complex and would require additional services
-        // This is a simplified placeholder
-        result = {
-          contentType: 'video/mp4',
-          content: 'Video creation placeholder',
-          title: 'Generated Video'
-        };
-        break;
-        
-      case 'course':
-        result = await convertToCourse(processedData);
-        break;
-        
-      default:
-        throw new Error('Invalid output format');
-    }
-    
-    // Step 4: Store result if needed
-    if (options.store) {
-      // Convert result to a file and upload
-      // This is a simplified placeholder
-      const resultFile = new File(
-        [result.content], 
-        `converted-${Date.now()}.${getFileExtension(outputFormat)}`,
-        { type: result.contentType }
-      );
-      
-      const uploadResult = await uploadFile(resultFile, 'your-bucket-name');
-      result.url = uploadResult.publicUrl;
-    }
-    
-    return result;
-  } catch (error) {
-    console.error('Conversion failed:', error);
-    throw error;
-  }
+export const getFileExtension = (format) => {
+  const extensions = {
+    text: 'txt',
+    pdf: 'pdf',
+    audio: 'mp3',
+    video: 'mp4',
+    course: 'html'
+  };
+  
+  return extensions[format] || 'txt';
 };
 
 /**
- * Helper function to get file extension based on output format
+ * Convert media from one format to another
+ * @param {string} inputType - Type of input (url, file)
+ * @param {string|File} input - Input URL or file
+ * @param {string} outputFormat - Desired output format
+ * @param {Object} options - Additional conversion options
+ * @returns {Promise} - Conversion result
  */
-const getFileExtension = (format) => {
-  switch (format) {
-    case 'text': return 'txt';
-    case 'pdf': return 'pdf';
-    case 'audio': return 'mp3';
-    case 'video': return 'mp4';
-    case 'course': return 'json';
-    default: return 'txt';
+export const convertMedia = async (inputType, input, outputFormat, options = {}) => {
+  try {
+    // Simulate processing time
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    let content = '';
+    let metadata = {};
+    
+    // Process input based on type
+    if (inputType === 'url') {
+      const url = input;
+      
+      // Handle YouTube URLs
+      if (url.includes('youtube.com') || url.includes('youtu.be')) {
+        const youtubeData = await convertYoutubeToText(url);
+        content = youtubeData.transcript;
+        metadata = {
+          title: youtubeData.title,
+          source: 'YouTube',
+          author: youtubeData.channelTitle,
+          thumbnail: youtubeData.thumbnailUrl
+        };
+      } else {
+        // For demo purposes, generate placeholder content for other URLs
+        content = `Content extracted from: ${url}\n\nThis is placeholder content for demonstration purposes. In a production environment, this would contain the actual content extracted from the URL.`;
+        metadata = {
+          title: 'URL Content',
+          source: url
+        };
+      }
+    } else if (inputType === 'file') {
+      // For demo purposes, generate placeholder content for files
+      const file = input;
+      content = `Content extracted from file: ${file.name}\n\nThis is placeholder content for demonstration purposes. In a production environment, this would contain the actual content extracted from the file.`;
+      metadata = {
+        title: file.name,
+        source: 'File Upload',
+        type: file.type,
+        size: file.size
+      };
+    }
+    
+    // Apply options
+    if (options.summarize) {
+      content = `[SUMMARY]\n${content.substring(0, content.length / 3)}\n\nThis content has been summarized for brevity.`;
+    }
+    
+    if (options.translate && options.targetLanguage) {
+      content = `[TRANSLATED TO ${options.targetLanguage.toUpperCase()}]\n${content}\n\nNote: This is a simulation of translation. In a production environment, this would be properly translated to ${options.targetLanguage}.`;
+    }
+    
+    // Format output based on selected format
+    let formattedContent = '';
+    let contentType = '';
+    
+    switch (outputFormat) {
+      case 'text':
+        formattedContent = content;
+        contentType = 'text/plain';
+        break;
+      case 'pdf':
+        formattedContent = `PDF CONTENT\n${content}`;
+        contentType = 'application/pdf';
+        break;
+      case 'audio':
+        formattedContent = `AUDIO CONTENT\n${content}`;
+        contentType = 'audio/mpeg';
+        break;
+      case 'video':
+        formattedContent = `VIDEO CONTENT\n${content}`;
+        contentType = 'video/mp4';
+        break;
+      case 'course':
+        formattedContent = `
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Training Course: ${metadata.title || 'Converted Content'}</title>
+  <style>
+    body { font-family: Arial, sans-serif; line-height: 1.6; max-width: 800px; margin: 0 auto; padding: 20px; }
+    h1 { color: #2563eb; }
+    .module { border: 1px solid #e5e7eb; border-radius: 8px; padding: 15px; margin-bottom: 20px; }
+    .module h2 { margin-top: 0; color: #1f2937; }
+  </style>
+</head>
+<body>
+  <h1>Training Course: ${metadata.title || 'Converted Content'}</h1>
+  <p><strong>Source:</strong> ${metadata.source || 'Unknown'}</p>
+  
+  <div class="module">
+    <h2>Module 1: Introduction</h2>
+    <p>${content.substring(0, content.length / 3)}</p>
+  </div>
+  
+  <div class="module">
+    <h2>Module 2: Core Concepts</h2>
+    <p>${content.substring(content.length / 3, 2 * content.length / 3)}</p>
+  </div>
+  
+  <div class="module">
+    <h2>Module 3: Advanced Topics</h2>
+    <p>${content.substring(2 * content.length / 3)}</p>
+  </div>
+</body>
+</html>
+        `;
+        contentType = 'text/html';
+        break;
+      default:
+        formattedContent = content;
+        contentType = 'text/plain';
+    }
+    
+    return {
+      content: formattedContent,
+      contentType,
+      metadata
+    };
+  } catch (error) {
+    console.error('Conversion error:', error);
+    throw new Error(`Conversion failed: ${error.message}`);
   }
 };
